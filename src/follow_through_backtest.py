@@ -7,12 +7,15 @@ from typing import Callable, Iterable
 import pandas as pd
 
 
-BAR_COLUMNS = ["symbol", "timestamp", "close", "date"]
+BAR_COLUMNS = ["symbol", "timestamp", "close", "volume", "trade_count", "vwap", "date"]
 SIGNAL_COLUMNS = [
     "symbol",
     "date",
     "signal_timestamp",
     "signal_close",
+    "signal_volume",
+    "signal_trade_count",
+    "signal_vwap",
     "window_minutes",
     "jump_return",
     "horizon",
@@ -265,6 +268,9 @@ def _signals_for_group(group: pd.DataFrame, config: BacktestConfig) -> pd.DataFr
                     "date": group.at[index, "date"],
                     "signal_timestamp": group.at[index, "timestamp"],
                     "signal_close": signal_close,
+                    "signal_volume": group.at[index, "volume"],
+                    "signal_trade_count": group.at[index, "trade_count"],
+                    "signal_vwap": group.at[index, "vwap"],
                     "window_minutes": config.window_minutes,
                     "jump_return": float(group.at[index, "jump_return"]),
                     "horizon": horizon.label,
@@ -302,7 +308,8 @@ def _prepare_bars(df: pd.DataFrame) -> pd.DataFrame:
     prepared["symbol"] = prepared["symbol"].astype(str).str.upper()
     prepared["timestamp"] = pd.to_datetime(prepared["timestamp"], utc=True)
     prepared["date"] = prepared["date"].astype(str)
-    prepared["close"] = pd.to_numeric(prepared["close"], errors="coerce")
+    for column in ["close", "volume", "trade_count", "vwap"]:
+        prepared[column] = pd.to_numeric(prepared[column], errors="coerce")
     prepared = prepared.dropna(subset=["symbol", "timestamp", "date", "close"])
     return prepared.sort_values(["symbol", "date", "timestamp"], kind="mergesort").reset_index(drop=True)
 

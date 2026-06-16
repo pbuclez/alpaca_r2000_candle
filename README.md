@@ -243,6 +243,48 @@ python scripts/backtest_jump_followthrough.py \
   --summary-out results/jump_summary.json
 ```
 
+The signal export includes the signal candle's `signal_volume`,
+`signal_trade_count`, and `signal_vwap`, so you can segment outcomes by
+liquidity or activity after the run.
+
+## Backtest Target Before Stop
+
+You can test whether a jump signal reaches a profit target before a stop loss:
+
+```bash
+python scripts/backtest_target_stop.py \
+  --data data/raw/r2000_1min \
+  --jump-pct 3 \
+  --window-minutes 5 \
+  --target-pct 2 \
+  --stop-pct 1 \
+  --entry next_open \
+  --max-hold eod \
+  --same-bar-policy stop_first \
+  --trades-out results/target_stop_trades_3pct.csv \
+  --summary-out results/target_stop_summary_3pct.json
+```
+
+The default V1 trade test is:
+
+```text
+signal: close / close.shift(5) - 1 >= 3%
+entry: next 1-minute candle open
+target: entry price + 2%
+stop: entry price - 1%
+hold: until target, stop, or end of day
+```
+
+The script walks forward through same-day candles and uses `high`/`low` to
+detect whether target or stop was touched first. If a single 1-minute candle
+touches both target and stop, the default `--same-bar-policy stop_first` treats
+that as a stop for conservative accounting. Use `--same-bar-policy target_first`
+or `--same-bar-policy ambiguous` to test other assumptions.
+
+The summary reports overall results plus an automatic split above and below the
+median `signal_trade_count`, which helps compare high-activity and low-activity
+jump candles.
+
 ## Alpaca Feed Notes
 
 `sip` provides broader consolidated market coverage if your Alpaca account has access.
@@ -290,11 +332,13 @@ alpaca_r2000_candle/
     rate_limiter.py
     downloader.py
     follow_through_backtest.py
+    target_stop_backtest.py
     storage.py
     manifest.py
     utils.py
   scripts/
     backtest_jump_followthrough.py
+    backtest_target_stop.py
     download_bars.py
     validate_dataset.py
 ```
