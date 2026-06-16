@@ -1,0 +1,14 @@
+__pycache__/
+*.py[cod]
+*$py.class
+
+.venv/
+venv/
+
+.env
+
+data/raw/*
+!data/raw/.gitkeep
+
+logs/*
+!logs/.gitkeep

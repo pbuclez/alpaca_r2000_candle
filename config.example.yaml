@@ -1,0 +1,15 @@
+symbols: data/symbols/russell2000.csv
+start: "2025-01-01"
+end: "2025-12-31"
+timeframe: 1Min
+feed: sip
+adjustment: raw
+out: data/raw/r2000_1min
+batch_size: 300
+requests_per_minute: 180
+resume: true
+manifest: logs/download_manifest.sqlite
+log_file: logs/downloader.log
+compression: zstd
+max_retries: 5
+timeout_seconds: 30
