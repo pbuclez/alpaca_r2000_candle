@@ -78,21 +78,6 @@ python scripts/download_bars.py --config config.example.yaml
 
 Command-line flags override values from the YAML config.
 
-## Minimal Test Mode
-
-A small sample symbol file is included at `data/symbols/test_symbols.csv`:
-
-```bash
-python scripts/download_bars.py \
-  --symbols data/symbols/test_symbols.csv \
-  --start 2025-01-02 \
-  --end 2025-01-03 \
-  --batch-size 5 \
-  --requests-per-minute 60 \
-  --out data/raw/test_r2000_1min \
-  --resume
-```
-
 ## How It Works
 
 The downloader uses NYSE trading days from `pandas-market-calendars`, so it avoids weekends and exchange holidays.
@@ -205,6 +190,59 @@ The validation script prints:
 - completed manifest rows whose output file is missing
 - optional sampled timestamp sort checks
 
+## Backtest Jump Follow-Through
+
+You can test whether sharp intraday jumps continue or revert with:
+
+```bash
+python scripts/backtest_jump_followthrough.py \
+  --data data/raw/r2000_1min \
+  --jump-pct 3 \
+  --window-minutes 5 \
+  --horizons 1m,5m,15m,30m,1h,5h,eod
+```
+
+The default hypothesis is:
+
+```text
+signal when close / close.shift(5) - 1 >= 3%
+```
+
+Signals are evaluated within each `symbol` and `date`. Each horizon is scored
+only when the future bar exists later in the same trading day. For example,
+`1h` requires a bar 60 minutes after the signal, `5h` requires a bar 300
+minutes after the signal, and `eod` uses the final available close for that
+symbol/date. Late-day signals can therefore be eligible for `eod` while being
+ineligible for `5h`.
+
+The summary includes:
+
+- eligible signal count by horizon
+- follow-through count
+- revert count
+- flat count
+- follow-through/revert ratio
+- win rate, where follow-through is the win condition
+- signal frequency per trading day
+- average and median future return
+
+By default, the script applies a 5-minute cooldown per symbol/day so repeated
+qualifying bars from the same jump do not dominate the counts. Use
+`--allow-overlap` to count every qualifying bar, or `--cooldown-minutes N` to
+choose a different cooldown.
+
+You can export signal-level and summary results:
+
+```bash
+python scripts/backtest_jump_followthrough.py \
+  --data data/raw/r2000_1min \
+  --jump-pct 3 \
+  --window-minutes 5 \
+  --horizons 1m,5m,15m,30m,1h,5h,eod \
+  --signals-out results/jump_signals.csv \
+  --summary-out results/jump_summary.json
+```
+
 ## Alpaca Feed Notes
 
 `sip` provides broader consolidated market coverage if your Alpaca account has access.
@@ -251,10 +289,12 @@ alpaca_r2000_candle/
     alpaca_client.py
     rate_limiter.py
     downloader.py
+    follow_through_backtest.py
     storage.py
     manifest.py
     utils.py
   scripts/
+    backtest_jump_followthrough.py
     download_bars.py
     validate_dataset.py
 ```
